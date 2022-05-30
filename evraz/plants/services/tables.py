@@ -4,6 +4,8 @@ import openpyxl
 
 
 class PlantsExcelParser:
+    first_row_column = 'date'
+    last_row_column = 'unload_date'
     columns_model_fields = {
         'Дата': 'date',
         'Дата выгрузки': 'unload_date',
@@ -12,8 +14,9 @@ class PlantsExcelParser:
         '№ УПД': 'upd_number'
     }
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, start_row: int = 1):
         self.workbook = openpyxl.load_workbook(filename=filename, data_only=True)
+        self.start_row = start_row
 
     def generate_plant_from_row(self, row, first_idx: int, last_idx: int) -> Tuple[dict, list]:
         """Валидация и создания словаря со значениями ЗМК, обьектов ЗМК
@@ -26,8 +29,7 @@ class PlantsExcelParser:
             if not cell.value:
                 continue
 
-            column = self.workbook.active[5][cell.col_idx - 1].value
-
+            column = self.workbook.active[self.start_row-1][cell.col_idx-1].value
             if column.lower().startswith(plant_object_column_name):
                 plant_objects.append(cell.value)
 
@@ -36,7 +38,7 @@ class PlantsExcelParser:
                 continue
 
             if model_field.endswith('date'):
-                plant[model_field] = str(cell.value)[:10]  # cut time, save date
+                plant[model_field] = str(cell.value)[:10]  # отрезаем время, сохраняем дату
             else:
                 plant[model_field] = cell.value
 
@@ -47,22 +49,22 @@ class PlantsExcelParser:
 
     def get_plants_and_plants_objects(self) -> Tuple[list, list]:
         """Списки данных с ЗМК и их обьектами"""
-        ws = self.workbook.active
         plants = []
         plants_objects = []
 
-        for row in ws.iter_rows(6):
-            first_idx, last_idx = None, None
+        for row in self.workbook.active.iter_rows(self.start_row):
+            first_idx, last_idx = None, None  # границы 1 записи
+
             for cell in row:
                 if not cell.value:
                     continue
 
-                column_name = ws[5][cell.col_idx-1].value
+                column_name = self.workbook.active[self.start_row-1][cell.col_idx-1].value
                 model_field = self.columns_model_fields.get(column_name)
 
-                if model_field == 'date':
+                if model_field == self.first_row_column:
                     first_idx = cell.col_idx - 1
-                elif model_field == 'unload_date':
+                elif model_field == self.last_row_column:
                     last_idx = cell.col_idx - 1
 
                 if first_idx and last_idx:

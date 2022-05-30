@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:12.2
+    environment:
+        POSTGRES_DB: db
+        POSTGRES_USER: user
+        POSTGRES_PASSWORD: password
+  web:
+    build: .
+    command: python evraz/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+        DATABASE: postgres
+        SQL_ENGINE: django.db.backends.postgresql
+        SQL_DATABASE: db
+        SQL_USER: user
+        SQL_PASSWORD: password
+        SQL_HOST: db
+        SQL_PORT: 5432
